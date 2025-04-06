@@ -75,37 +75,7 @@ func New(apiKey string) *Client {
 
 // AnalyzeTerms analyzes text to identify terms that should not be translated
 func (c *Client) AnalyzeTerms(text string) (*TermAnalysis, error) {
-	// prepare the prompt for analyzing terms
-	promptTemplate := `
-Analyze the following text and identify special terms 
-that should not be translated from English to Russian. For each term, provide 
-a description and context (sentences where the term appears).
-
-Text:
-%s
-
-Return your answer strictly in the following JSON format:
-{
-  "terms": [
-    {
-      "term": "grip",
-      "description": "traction between tires and road surface",
-      "context": [
-        "The car had excellent grip on the wet track.",
-        "Maintaining grip is crucial during high-speed cornering."
-      ]
-    },
-    {
-      "term": "rotation",
-      "description": "car rotating around its vertical axis",
-      "context": [
-        "The driver initiated rotation by applying the correct amount of steering input."
-      ]
-    }
-  ]
-}
-`
-	prompt := fmt.Sprintf(promptTemplate, text)
+	prompt := fmt.Sprintf(analyzeTermsPrompt, text)
 
 	// create the completion request
 	req := CompletionRequest{
@@ -167,17 +137,7 @@ func (c *Client) TranslateTextChunk(chunk string, terms []string) (string, error
 		termsList += "- " + term + "\n"
 	}
 
-	// prepare the prompt for translation
-	promptTemplate := `
-Translate the following text from English to Russian. The following terms should remain untranslated: 
-%s
-
-Text to translate:
-%s
-
-Provide only the translated text without any additional comments or explanations.
-`
-	prompt := fmt.Sprintf(promptTemplate, termsList, chunk)
+	prompt := fmt.Sprintf(translateTextPrompt, termsList, chunk)
 
 	// create the completion request
 	req := CompletionRequest{
