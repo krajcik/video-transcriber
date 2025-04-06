@@ -75,7 +75,7 @@ func New(apiKey string) *Client {
 
 // AnalyzeTerms analyzes text to identify terms that should not be translated
 func (c *Client) AnalyzeTerms(text string) (*TermAnalysis, error) {
-	// Prepare the prompt for analyzing terms
+	// prepare the prompt for analyzing terms
 	promptTemplate := `
 Analyze the following text and identify special terms 
 that should not be translated from English to Russian. For each term, provide 
@@ -107,7 +107,7 @@ Return your answer strictly in the following JSON format:
 `
 	prompt := fmt.Sprintf(promptTemplate, text)
 
-	// Create the completion request
+	// create the completion request
 	req := CompletionRequest{
 		Model: "meta-llama/llama-4-maverick",
 		Messages: []Message{
@@ -118,30 +118,30 @@ Return your answer strictly in the following JSON format:
 		},
 	}
 
-	// Send the request to OpenRouter
+	// send the request to OpenRouter
 	resp, err := c.createCompletion(req)
 	if err != nil {
 		return nil, fmt.Errorf("error getting completion: %w", err)
 	}
 
-	// Extract the JSON response
+	// extract the JSON response
 	if len(resp.Choices) == 0 {
 		return nil, fmt.Errorf("no choices in response")
 	}
 
 	content := resp.Choices[0].Message.Content
 
-	// Extract JSON from response (handles both raw JSON and markdown with explanations)
+	// extract JSON from response (handles both raw JSON and markdown with explanations)
 	jsonStart := strings.Index(content, "```json")
 	if jsonStart != -1 {
-		// If markdown format, extract the JSON part
-		content = content[jsonStart+7:] // Skip "```json"
+		// if markdown format, extract the JSON part
+		content = content[jsonStart+7:] // skip "```json"
 		jsonEnd := strings.LastIndex(content, "```")
 		if jsonEnd != -1 {
 			content = content[:jsonEnd]
 		}
 	} else {
-		// If no markdown, look for the first {
+		// if no markdown, look for the first {
 		jsonStart = strings.Index(content, "{")
 		if jsonStart != -1 {
 			content = content[jsonStart:]
@@ -150,7 +150,7 @@ Return your answer strictly in the following JSON format:
 
 	content = strings.TrimSpace(content)
 
-	// Parse the JSON response
+	// parse the JSON response
 	var analysis TermAnalysis
 	if err := json.Unmarshal([]byte(content), &analysis); err != nil {
 		return nil, fmt.Errorf("error parsing analysis: %w (content: %s)", err, content)
@@ -161,13 +161,13 @@ Return your answer strictly in the following JSON format:
 
 // TranslateTextChunk translates a single chunk of text from English to Russian, preserving specified terms
 func (c *Client) TranslateTextChunk(chunk string, terms []string) (string, error) {
-	// Join terms for the prompt
+	// join terms for the prompt
 	termsList := ""
 	for _, term := range terms {
 		termsList += "- " + term + "\n"
 	}
 
-	// Prepare the prompt for translation
+	// prepare the prompt for translation
 	promptTemplate := `
 Translate the following text from English to Russian. The following terms should remain untranslated: 
 %s
@@ -179,7 +179,7 @@ Provide only the translated text without any additional comments or explanations
 `
 	prompt := fmt.Sprintf(promptTemplate, termsList, chunk)
 
-	// Create the completion request
+	// create the completion request
 	req := CompletionRequest{
 		Model: "meta-llama/llama-4-maverick",
 		Messages: []Message{
@@ -190,13 +190,13 @@ Provide only the translated text without any additional comments or explanations
 		},
 	}
 
-	// Send the request to OpenRouter
+	// send the request to OpenRouter
 	resp, err := c.createCompletion(req)
 	if err != nil {
 		return "", fmt.Errorf("error getting translation: %w", err)
 	}
 
-	// Extract the text from the response
+	// extract the text from the response
 	if len(resp.Choices) == 0 {
 		return "", fmt.Errorf("no choices in response")
 	}
@@ -206,16 +206,16 @@ Provide only the translated text without any additional comments or explanations
 
 // TranslateText translates text from English to Russian in chunks, preserving specified terms
 func (c *Client) TranslateText(text string, terms []string) (string, error) {
-	// Split text into paragraphs
+	// split text into paragraphs
 	paragraphs := splitIntoParagraphs(text)
 
-	// Maximum paragraphs per chunk (adjust as needed based on token limits)
+	// maximum paragraphs per chunk (adjust as needed based on token limits)
 	maxParagraphsPerChunk := 5
 
 	var translatedText string
 	var chunks []string
 
-	// Group paragraphs into chunks
+	// group paragraphs into chunks
 	for i := 0; i < len(paragraphs); i += maxParagraphsPerChunk {
 		end := i + maxParagraphsPerChunk
 		if end > len(paragraphs) {
@@ -228,7 +228,7 @@ func (c *Client) TranslateText(text string, terms []string) (string, error) {
 
 	fmt.Printf("Translating text in %d chunks...\n", len(chunks))
 
-	// Translate each chunk
+	// translate each chunk
 	for i, chunk := range chunks {
 		fmt.Printf("Translating chunk %d of %d...\n", i+1, len(chunks))
 
@@ -248,10 +248,10 @@ func (c *Client) TranslateText(text string, terms []string) (string, error) {
 
 // splitIntoParagraphs splits text into paragraphs
 func splitIntoParagraphs(text string) []string {
-	// Split by double newlines
+	// split by double newlines
 	paragraphs := strings.Split(text, "\n\n")
 
-	// Filter out empty paragraphs
+	// filter out empty paragraphs
 	var filteredParagraphs []string
 	for _, p := range paragraphs {
 		trimmed := strings.TrimSpace(p)
@@ -260,11 +260,11 @@ func splitIntoParagraphs(text string) []string {
 		}
 	}
 
-	// If there are no clear paragraphs, try to split by single newlines
+	// if there are no clear paragraphs, try to split by single newlines
 	if len(filteredParagraphs) <= 1 {
 		lines := strings.Split(text, "\n")
 
-		// Group consecutive non-empty lines into paragraphs
+		// group consecutive non-empty lines into paragraphs
 		var currentParagraph string
 		filteredParagraphs = []string{}
 
@@ -288,12 +288,12 @@ func splitIntoParagraphs(text string) []string {
 		}
 	}
 
-	// If still no paragraphs, split by sentences as a last resort
+	// if still no paragraphs, split by sentences as a last resort
 	if len(filteredParagraphs) <= 1 && len(strings.TrimSpace(text)) > 1000 {
-		// Simple regex-free sentence splitting (not perfect but should work for most cases)
+		// simple regex-free sentence splitting (not perfect but should work for most cases)
 		sentences := splitIntoSentences(text)
 
-		// Group sentences into reasonable-sized paragraphs
+		// group sentences into reasonable-sized paragraphs
 		const maxSentencesPerParagraph = 5
 		filteredParagraphs = []string{}
 		var currentParagraph string
@@ -330,12 +330,12 @@ func splitIntoParagraphs(text string) []string {
 
 // splitIntoSentences splits text into sentences
 func splitIntoSentences(text string) []string {
-	// This is a simplified version that handles common ending punctuation
+	// this is a simplified version that handles common ending punctuation
 	text = strings.ReplaceAll(text, "! ", "!|")
 	text = strings.ReplaceAll(text, "? ", "?|")
 	text = strings.ReplaceAll(text, ". ", ".|")
 
-	// Handle special cases for common abbreviations
+	// handle special cases for common abbreviations
 	text = strings.ReplaceAll(text, "Mr.|", "Mr. ")
 	text = strings.ReplaceAll(text, "Mrs.|", "Mrs. ")
 	text = strings.ReplaceAll(text, "Dr.|", "Dr. ")
@@ -349,48 +349,48 @@ func splitIntoSentences(text string) []string {
 
 // createCompletion sends a completion request to the OpenRouter API
 func (c *Client) createCompletion(req CompletionRequest) (*CompletionResponse, error) {
-	// Marshal the request to JSON
+	// marshal the request to JSON
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
 
-	// Create the HTTP request
+	// create the HTTP request
 	httpReq, err := http.NewRequest("POST", baseURL+"/chat/completions", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
-	// Set the headers
+	// set the headers
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	httpReq.Header.Set("HTTP-Referer", "https://github.com/AssemblyAI/assemblyai-go-sdk")
 
-	// Send the request
+	// send the request
 	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("error sending request: %w", err)
 	}
 	defer httpResp.Body.Close()
 
-	// Read the response body
+	// read the response body
 	respBody, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response: %w", err)
 	}
 
-	// Log request and response for debugging
+	// log request and response for debugging
 	fmt.Printf("Request URL: %s\n", httpReq.URL)
 	fmt.Printf("Request Headers: %v\n", httpReq.Header)
 	fmt.Printf("Response Status: %s\n", httpResp.Status)
 	fmt.Printf("Response Body: %s\n", string(respBody))
 
-	// Check for errors
+	// check for errors
 	if httpResp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API error: %s, body: %s", httpResp.Status, string(respBody))
 	}
 
-	// Unmarshal the response
+	// unmarshal the response
 	var resp CompletionResponse
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return nil, fmt.Errorf("error unmarshaling response: %w", err)

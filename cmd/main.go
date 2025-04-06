@@ -1,3 +1,5 @@
+//go:build with_db
+
 package main
 
 import (
@@ -19,7 +21,7 @@ import (
 )
 
 func main() {
-	// Command-line flags
+	// command-line flags
 	var (
 		translateFlag   = flag.Bool("translate", false, "Enable translation after transcription")
 		dbPathFlag      = flag.String("db", "", "Path to SQLite database file")
@@ -29,7 +31,7 @@ func main() {
 	)
 	flag.Parse()
 
-	// Check for required input file argument
+	// check for required input file argument
 	args := flag.Args()
 	if len(args) < 1 {
 		fmt.Println("Usage: assemblyai-transcriber [options] <input-file> [api-key]")
@@ -42,13 +44,13 @@ func main() {
 		log.Fatalf("Input file does not exist: %s", inputFile)
 	}
 
-	// Load configuration from environment variables and .env
+	// load configuration from environment variables and .env
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	// Override with command-line flags if provided
+	// override with command-line flags if provided
 	if len(args) > 1 {
 		cfg.AssemblyAIAPIKey = args[1]
 	}
@@ -59,12 +61,12 @@ func main() {
 		cfg.OpenRouterAPIKey = *openRouterFlag
 	}
 
-	// Check for required AssemblyAI API key
+	// check for required AssemblyAI API key
 	if cfg.AssemblyAIAPIKey == "" {
 		log.Fatal("AssemblyAI API key is required. Provide it as second argument or set ASSEMBLYAI_API_KEY in environment or .env file")
 	}
 
-	// Initialize database
+	// initialize database
 	db, err := database.New(cfg.DatabasePath)
 	if err != nil {
 		log.Fatalf("Error initializing database: %v", err)
@@ -75,22 +77,22 @@ func main() {
 		log.Fatalf("Error setting up database: %v", err)
 	}
 
-	// Extract audio from input file
+	// extract audio from input file
 	fmt.Println("Extracting audio from video file...")
 	audioFile, err := extractAudio(inputFile)
 	if err != nil {
 		log.Fatalf("Error extracting audio: %v", err)
 	}
-	defer os.Remove(audioFile) // Clean up extracted audio file
+	defer os.Remove(audioFile) // clean up extracted audio file
 
-	// Transcribe audio file
+	// transcribe audio file
 	fmt.Println("Transcribing audio...")
 	transcriptText, err := transcribeAudio(audioFile, cfg.AssemblyAIAPIKey)
 	if err != nil {
 		log.Fatalf("Error transcribing audio: %v", err)
 	}
 
-	// Save transcription to database
+	// save transcription to database
 	fmt.Println("Saving transcription to database...")
 	transcriptID, err := db.SaveTranscription(filepath.Base(inputFile), transcriptText)
 	if err != nil {
@@ -98,7 +100,7 @@ func main() {
 	}
 	fmt.Printf("Transcription saved with ID: %d\n", transcriptID)
 
-	// Save transcript to file if requested
+	// save transcript to file if requested
 	if *transcriptFlag != "" {
 		outputPath := *transcriptFlag
 		if err := os.WriteFile(outputPath, []byte(transcriptText), 0644); err != nil {
@@ -107,26 +109,26 @@ func main() {
 		fmt.Printf("Transcript saved to: %s\n", outputPath)
 	}
 
-	// Process translation if requested
+	// process translation if requested
 	if *translateFlag {
-		// Check for required OpenRouter API key
+		// check for required OpenRouter API key
 		if cfg.OpenRouterAPIKey == "" {
 			log.Fatal("OpenRouter API key is required for translation. Set it with --openrouter-key flag or OPENROUTER_API_KEY in environment or .env file")
 		}
 
-		// Initialize OpenRouter client
+		// initialize OpenRouter client
 		orClient := openrouter.New(cfg.OpenRouterAPIKey)
 
-		// Initialize translation service
+		// initialize translation service
 		translationService := translation.New(db, orClient)
 
-		// Process transcription
+		// process transcription
 		fmt.Println("Processing transcription for translation...")
 		if err := translationService.ProcessTranscription(transcriptID); err != nil {
 			log.Fatalf("Error processing transcription: %v", err)
 		}
 
-		// Save translation to file if requested
+		// save translation to file if requested
 		if *translationFlag != "" {
 			if err := translationService.SaveTranslationToFile(transcriptID, *translationFlag); err != nil {
 				log.Fatalf("Error saving translation to file: %v", err)
@@ -140,7 +142,7 @@ func main() {
 // extractAudio extracts audio from a video file
 func extractAudio(inputFile string) (string, error) {
 	outputFile := "extracted_audio.mp3"
-	// Add -y flag to automatically overwrite existing files
+	// add -y flag to automatically overwrite existing files
 	cmd := exec.Command("ffmpeg", "-y", "-i", inputFile, "-vn", "-ar", "44.1k", "-ac", "2", "-ab", "128k", "-f", "mp3", outputFile)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
@@ -158,14 +160,14 @@ func transcribeAudio(audioFile, apiKey string) (string, error) {
 	client := assemblyai.NewClient(apiKey)
 	ctx := context.Background()
 
-	// Open audio file for reading
+	// open audio file for reading
 	file, err := os.Open(audioFile)
 	if err != nil {
 		return "", fmt.Errorf("error opening file: %v", err)
 	}
 	defer file.Close()
 
-	// Upload file to AssemblyAI server
+	// upload file to AssemblyAI server
 	fmt.Println("Uploading file to AssemblyAI server...")
 	audioURL, err := client.Upload(ctx, file)
 	if err != nil {
@@ -173,14 +175,14 @@ func transcribeAudio(audioFile, apiKey string) (string, error) {
 	}
 	fmt.Println("File uploaded successfully:", audioURL)
 
-	// Transcribe audio
+	// transcribe audio
 	fmt.Println("Starting transcription...")
 	transcript, err := client.Transcripts.TranscribeFromURL(ctx, audioURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating transcription: %v", err)
 	}
 
-	// Wait for transcription completion
+	// wait for transcription completion
 	fmt.Println("Waiting for transcription to complete...")
 	transcript, err = client.Transcripts.Wait(ctx, assemblyai.ToString(transcript.ID))
 	if err != nil {

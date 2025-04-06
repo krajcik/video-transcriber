@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
 
 // DB represents the database connection
@@ -28,7 +28,7 @@ func New(dbPath string) (*DB, error) {
 
 // Setup initializes the database schema
 func (db *DB) Setup() error {
-	// Create transcriptions table
+	// create transcriptions table
 	_, err := db.conn.Exec(`
 		CREATE TABLE IF NOT EXISTS transcriptions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,7 +41,7 @@ func (db *DB) Setup() error {
 		return fmt.Errorf("error creating transcriptions table: %w", err)
 	}
 
-	// Create untranslatable_terms table
+	// create untranslatable_terms table
 	_, err = db.conn.Exec(`
 		CREATE TABLE IF NOT EXISTS untranslatable_terms (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +54,7 @@ func (db *DB) Setup() error {
 		return fmt.Errorf("error creating untranslatable_terms table: %w", err)
 	}
 
-	// Create translations table
+	// create translations table
 	_, err = db.conn.Exec(`
 		CREATE TABLE IF NOT EXISTS translations (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -29,34 +29,34 @@ func New(db *database.DB, openrouter *openrouter.Client) *Service {
 
 // ProcessTranscription analyzes and translates a transcription
 func (s *Service) ProcessTranscription(transcriptionID int64) error {
-	// Get the transcription text
+	// get the transcription text
 	text, err := s.db.GetTranscription(transcriptionID)
 	if err != nil {
 		return fmt.Errorf("error retrieving transcription: %w", err)
 	}
 
-	// Analyze terms
+	// analyze terms
 	if err := s.analyzeTerms(text); err != nil {
 		return fmt.Errorf("error analyzing terms: %w", err)
 	}
 
-	// Process terms interactively
+	// process terms interactively
 	if err := s.termManager.ProcessTermsInteractive(); err != nil {
 		return fmt.Errorf("error processing terms: %w", err)
 	}
 
-	// Save terms to database
+	// save terms to database
 	if err := s.saveTerms(); err != nil {
 		return fmt.Errorf("error saving terms: %w", err)
 	}
 
-	// Translate text
+	// translate text
 	translatedText, err := s.translateText(text)
 	if err != nil {
 		return fmt.Errorf("error translating text: %w", err)
 	}
 
-	// Save translation to database
+	// save translation to database
 	if err := s.db.SaveTranslation(transcriptionID, translatedText); err != nil {
 		return fmt.Errorf("error saving translation: %w", err)
 	}
@@ -69,24 +69,24 @@ func (s *Service) ProcessTranscription(transcriptionID int64) error {
 func (s *Service) analyzeTerms(text string) error {
 	fmt.Println("Analyzing text for specialized terms...")
 
-	// Analyze text with OpenRouter
+	// analyze text with OpenRouter
 	analysis, err := s.openrouter.AnalyzeTerms(text)
 	if err != nil {
 		return fmt.Errorf("error analyzing terms: %w", err)
 	}
 
-	// Convert to Term objects
-	var termsList []*terms.Term
+	// convert to Term objects
+	termsList := make([]*terms.Term, 0, len(analysis.Terms))
 	for _, t := range analysis.Terms {
 		termsList = append(termsList, &terms.Term{
 			Term:        t.Term,
 			Description: t.Description,
 			Context:     t.Context,
-			Keep:        true, // Default to keeping
+			Keep:        true, // default to keeping
 		})
 	}
 
-	// Add to term manager
+	// add to term manager
 	s.termManager.AddTerms(termsList)
 	return nil
 }
@@ -108,10 +108,10 @@ func (s *Service) saveTerms() error {
 func (s *Service) translateText(text string) (string, error) {
 	fmt.Println("Translating text...")
 
-	// Get list of untranslatable terms
+	// get list of untranslatable terms
 	untranslatableTerms := s.termManager.GetUntranslatableTerms()
 
-	// Translate text
+	// translate text
 	translatedText, err := s.openrouter.TranslateText(text, untranslatableTerms)
 	if err != nil {
 		return "", fmt.Errorf("error translating text: %w", err)
@@ -122,22 +122,22 @@ func (s *Service) translateText(text string) (string, error) {
 
 // SaveTranscriptionToFile saves a transcription to a file
 func (s *Service) SaveTranscriptionToFile(transcriptionID int64, outputPath string) error {
-	// Get the transcription text
+	// get the transcription text
 	text, err := s.db.GetTranscription(transcriptionID)
 	if err != nil {
 		return fmt.Errorf("error retrieving transcription: %w", err)
 	}
 
-	// Create output directory if needed
+	// create output directory if needed
 	outputDir := filepath.Dir(outputPath)
 	if outputDir != "." {
-		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		if err := os.MkdirAll(outputDir, 0o750); err != nil {
 			return fmt.Errorf("error creating output directory: %w", err)
 		}
 	}
 
-	// Write to file
-	if err := os.WriteFile(outputPath, []byte(text), 0644); err != nil {
+	// write to file
+	if err := os.WriteFile(outputPath, []byte(text), 0o600); err != nil {
 		return fmt.Errorf("error writing transcription to file: %w", err)
 	}
 
@@ -147,22 +147,22 @@ func (s *Service) SaveTranscriptionToFile(transcriptionID int64, outputPath stri
 
 // SaveTranslationToFile saves a translation to a file
 func (s *Service) SaveTranslationToFile(transcriptionID int64, outputPath string) error {
-	// Get the translation text
+	// get the translation text
 	text, err := s.db.GetTranslation(transcriptionID)
 	if err != nil {
 		return fmt.Errorf("error retrieving translation: %w", err)
 	}
 
-	// Create output directory if needed
+	// create output directory if needed
 	outputDir := filepath.Dir(outputPath)
 	if outputDir != "." {
-		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		if err := os.MkdirAll(outputDir, 0o750); err != nil {
 			return fmt.Errorf("error creating output directory: %w", err)
 		}
 	}
 
-	// Write to file
-	if err := os.WriteFile(outputPath, []byte(text), 0644); err != nil {
+	// write to file
+	if err := os.WriteFile(outputPath, []byte(text), 0o600); err != nil {
 		return fmt.Errorf("error writing translation to file: %w", err)
 	}
 

@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	// Парсинг аргументов командной строки
+	// Разбор аргументов командной строки
 	idFlag := flag.Int64("id", 0, "ID транскрипции для перевода")
 	langFlag := flag.String("lang", "ru", "Язык перевода (например 'ru')")
 	allFlag := flag.Bool("all", false, "Перевести все непереведенные транскрипции")
@@ -66,7 +66,7 @@ func translateSingle(id int64, lang string, service *translation.Service) {
 }
 
 // translateAll переводит все непереведенные транскрипции
-func translateAll(lang string, service *translation.Service) {
+func translateAll(lang string, _ *translation.Service) {
 	fmt.Printf("Поиск непереведенных транскрипций для перевода на %s...\n", lang)
 
 	// TODO: Реализовать логику поиска и перевода всех непереведенных транскрипций

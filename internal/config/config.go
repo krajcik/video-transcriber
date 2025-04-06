@@ -18,7 +18,7 @@ type Config struct {
 // Load reads the configuration from environment variables
 // with optional fallback to .env file
 func Load() (*Config, error) {
-	// Load .env file if it exists
+	// load .env file if it exists
 	_ = godotenv.Load()
 
 	config := &Config{
@@ -28,10 +28,10 @@ func Load() (*Config, error) {
 		LogLevel:         getEnv("LOG_LEVEL", "info"),
 	}
 
-	// Ensure database directory exists
+	// ensure database directory exists
 	dbDir := filepath.Dir(config.DatabasePath)
 	if dbDir != "." {
-		if err := os.MkdirAll(dbDir, os.ModePerm); err != nil {
+		if err := os.MkdirAll(dbDir, 0o750); err != nil {
 			return nil, err
 		}
 	}

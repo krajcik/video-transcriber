@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,59 +11,70 @@ import (
 	"assemblyai-transcriber/internal/database"
 )
 
-func main() {
-	// Загрузка конфигурации из переменных среды и .env
+func run() int {
+	// command-line flags
+	var (
+		transcriptFlag = flag.String("transcript", "", "Path to transcript file")
+		dbPathFlag     = flag.String("db", "", "Path to database file")
+	)
+	flag.Parse()
+
+	// validate required flags
+	if *transcriptFlag == "" || *dbPathFlag == "" {
+		fmt.Println("Usage: savetodb --transcript=file --db=database.db")
+		flag.PrintDefaults()
+		return 1
+	}
+
+	// load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Ошибка загрузки конфигурации: %v", err)
+		log.Printf("Error loading configuration: %v", err)
+		return 1
 	}
 
-	// Проверяем аргументы командной строки
-	if len(os.Args) < 2 {
-		fmt.Println("Использование: savetodb <путь-к-транскрипции> [путь-к-базе-данных]")
-		os.Exit(1)
+	// override db path if specified
+	if *dbPathFlag != "" {
+		cfg.DatabasePath = *dbPathFlag
 	}
 
-	// Путь к файлу транскрипции
-	transcriptPath := os.Args[1]
-
-	// Проверяем существование файла
-	if _, err := os.Stat(transcriptPath); os.IsNotExist(err) {
-		log.Fatalf("Файл транскрипции не существует: %s", transcriptPath)
-	}
-
-	// Читаем содержимое файла
-	transcriptText, err := os.ReadFile(transcriptPath)
+	// read transcript file
+	transcriptText, err := os.ReadFile(filepath.Clean(*transcriptFlag))
 	if err != nil {
-		log.Fatalf("Ошибка чтения файла транскрипции: %v", err)
+		log.Printf("Error reading transcript file: %v", err)
+		return 1
 	}
 
-	// Используем путь к базе данных из аргументов или из конфигурации
-	dbPath := cfg.DatabasePath
-	if len(os.Args) > 2 {
-		dbPath = os.Args[2]
-	}
-
-	// Инициализация базы данных
-	fmt.Println("Подключение к базе данных:", dbPath)
-	db, err := database.New(dbPath)
+	// initialize database
+	db, err := database.New(cfg.DatabasePath)
 	if err != nil {
-		log.Fatalf("Ошибка инициализации базы данных: %v", err)
+		log.Printf("Error initializing database: %v", err)
+		return 1
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	}()
 
-	// Настройка схемы базы данных
+	// setup database schema
 	if err := db.Setup(); err != nil {
-		log.Fatalf("Ошибка настройки базы данных: %v", err)
+		log.Printf("Error setting up database: %v", err)
+		return 1
 	}
 
-	// Сохранение транскрипции в базу данных
-	fmt.Println("Сохранение транскрипции в базу данных...")
-	fileName := filepath.Base(transcriptPath)
-	transcriptID, err := db.SaveTranscription(fileName, string(transcriptText))
+	// save to database
+	fileName := filepath.Base(*transcriptFlag)
+	id, err := db.SaveTranscription(fileName, string(transcriptText))
 	if err != nil {
-		log.Fatalf("Ошибка сохранения транскрипции: %v", err)
+		log.Printf("Error saving to database: %v", err)
+		return 1
 	}
 
-	fmt.Printf("Транскрипция успешно сохранена с ID: %d\n", transcriptID)
+	fmt.Printf("Successfully saved transcript to database with ID: %d\n", id)
+	return 0
+}
+
+func main() {
+	os.Exit(run())
 }

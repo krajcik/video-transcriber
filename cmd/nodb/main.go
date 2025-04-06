@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"assemblyai-transcriber/internal/config"
 
@@ -15,13 +16,13 @@ import (
 )
 
 func main() {
-	// Command-line flags
+	// command-line flags
 	var (
 		transcriptFlag = flag.String("save-transcript", "", "Save transcript to file (specify filename)")
 	)
 	flag.Parse()
 
-	// Check for required input file argument
+	// check for required input file argument
 	args := flag.Args()
 	if len(args) < 1 {
 		fmt.Println("Usage: assemblyai-transcriber-nodb [options] <input-file> [api-key]")
@@ -34,42 +35,44 @@ func main() {
 		log.Fatalf("Input file does not exist: %s", inputFile)
 	}
 
-	// Load configuration from environment variables and .env
+	// load configuration from environment variables and .env
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	// Override with command-line flags if provided
+	// override with command-line flags if provided
 	if len(args) > 1 {
 		cfg.AssemblyAIAPIKey = args[1]
 	}
 
-	// Check for required AssemblyAI API key
+	// check for required AssemblyAI API key
 	if cfg.AssemblyAIAPIKey == "" {
 		log.Fatal("AssemblyAI API key is required. Provide it as second argument or set ASSEMBLYAI_API_KEY in environment or .env file")
 	}
 
-	// Extract audio from input file
+	// extract audio from input file
 	fmt.Println("Extracting audio from video file...")
 	audioFile, err := extractAudio(inputFile)
 	if err != nil {
 		log.Fatalf("Error extracting audio: %v", err)
 	}
-	defer os.Remove(audioFile) // Clean up extracted audio file
+	defer os.Remove(audioFile) // clean up extracted audio file
 
-	// Transcribe audio file
+	// transcribe audio file
 	fmt.Println("Transcribing audio...")
 	transcriptText, err := transcribeAudio(audioFile, cfg.AssemblyAIAPIKey)
 	if err != nil {
-		log.Fatalf("Error transcribing audio: %v", err)
+		log.Printf("Error transcribing audio: %v", err)
+		return
 	}
 
-	// Save transcript to file or stdout
+	// save transcript to file or stdout
 	outputPath := *transcriptFlag
 	if outputPath != "" {
-		if err := os.WriteFile(outputPath, []byte(transcriptText), 0644); err != nil {
-			log.Fatalf("Error saving transcript to file: %v", err)
+		if err := os.WriteFile(outputPath, []byte(transcriptText), 0o600); err != nil {
+			log.Printf("Error saving transcript to file: %v", err)
+			return
 		}
 		fmt.Printf("Transcript saved to: %s\n", outputPath)
 	} else {
@@ -85,7 +88,7 @@ func main() {
 // extractAudio extracts audio from a video file
 func extractAudio(inputFile string) (string, error) {
 	outputFile := "extracted_audio.mp3"
-	// Add -y flag to automatically overwrite existing files
+	// add -y flag to automatically overwrite existing files
 	cmd := exec.Command("ffmpeg", "-y", "-i", inputFile, "-vn", "-ar", "44.1k", "-ac", "2", "-ab", "128k", "-f", "mp3", outputFile)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
@@ -103,14 +106,14 @@ func transcribeAudio(audioFile, apiKey string) (string, error) {
 	client := assemblyai.NewClient(apiKey)
 	ctx := context.Background()
 
-	// Open audio file for reading
-	file, err := os.Open(audioFile)
+	// open audio file for reading
+	file, err := os.Open(filepath.Clean(audioFile))
 	if err != nil {
 		return "", fmt.Errorf("error opening file: %v", err)
 	}
 	defer file.Close()
 
-	// Upload file to AssemblyAI server
+	// upload file to AssemblyAI server
 	fmt.Println("Uploading file to AssemblyAI server...")
 	audioURL, err := client.Upload(ctx, file)
 	if err != nil {
@@ -118,14 +121,14 @@ func transcribeAudio(audioFile, apiKey string) (string, error) {
 	}
 	fmt.Println("File uploaded successfully:", audioURL)
 
-	// Transcribe audio
+	// transcribe audio
 	fmt.Println("Starting transcription...")
 	transcript, err := client.Transcripts.TranscribeFromURL(ctx, audioURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating transcription: %v", err)
 	}
 
-	// Wait for transcription completion
+	// wait for transcription completion
 	fmt.Println("Waiting for transcription to complete...")
 	transcript, err = client.Transcripts.Wait(ctx, assemblyai.ToString(transcript.ID))
 	if err != nil {
