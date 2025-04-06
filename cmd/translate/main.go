@@ -13,39 +13,39 @@ import (
 )
 
 func main() {
-	// Разбор аргументов командной строки
-	idFlag := flag.Int64("id", 0, "ID транскрипции для перевода")
-	langFlag := flag.String("lang", "ru", "Язык перевода (например 'ru')")
-	allFlag := flag.Bool("all", false, "Перевести все непереведенные транскрипции")
+	// Parse command line arguments
+	idFlag := flag.Int64("id", 0, "Transcription ID to translate")
+	langFlag := flag.String("lang", "ru", "Target language (e.g. 'ru')")
+	allFlag := flag.Bool("all", false, "Translate all untranslated transcriptions")
 	flag.Parse()
 
-	// Проверка аргументов
+	// Validate arguments
 	if *idFlag == 0 && !*allFlag {
-		fmt.Println("Необходимо указать либо --id, либо --all")
+		fmt.Println("Must specify either --id or --all")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	// Загрузка конфигурации
+	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Ошибка загрузки конфигурации: %v", err)
+		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	// Инициализация базы данных
+	// Initialize database
 	db, err := database.New(cfg.DatabasePath)
 	if err != nil {
-		log.Fatalf("Ошибка инициализации базы данных: %v", err)
+		log.Fatalf("Error initializing database: %v", err)
 	}
 	defer db.Close()
 
-	// Инициализация клиента OpenRouter
+	// Initialize OpenRouter client
 	openrouterClient := openrouter.New(cfg.OpenRouterAPIKey)
 
-	// Создание сервиса перевода
+	// Create translation service
 	translationService := translation.New(db, openrouterClient)
 
-	// Выполнение перевода в зависимости от флагов
+	// Execute translation based on flags
 	if *idFlag > 0 {
 		translateSingle(*idFlag, *langFlag, translationService)
 	} else if *allFlag {
@@ -53,22 +53,22 @@ func main() {
 	}
 }
 
-// translateSingle переводит одну транскрипцию
+// translateSingle translates a single transcription
 func translateSingle(id int64, lang string, service *translation.Service) {
-	fmt.Printf("Перевод транскрипции ID %d на %s...\n", id, lang)
+	fmt.Printf("Translating transcription ID %d to %s...\n", id, lang)
 
 	err := service.ProcessTranscription(id)
 	if err != nil {
-		log.Fatalf("Ошибка перевода: %v", err)
+		log.Fatalf("Translation error: %v", err)
 	}
 
-	fmt.Println("Перевод успешно завершен и сохранен в базу данных")
+	fmt.Println("Translation completed and saved to database")
 }
 
-// translateAll переводит все непереведенные транскрипции
+// translateAll translates all untranslated transcriptions
 func translateAll(lang string, _ *translation.Service) {
-	fmt.Printf("Поиск непереведенных транскрипций для перевода на %s...\n", lang)
+	fmt.Printf("Finding untranslated transcriptions for %s translation...\n", lang)
 
-	// TODO: Реализовать логику поиска и перевода всех непереведенных транскрипций
-	fmt.Println("Функционал перевода всех транскрипций будет реализован в следующей версии")
+	// TODO: Implement logic to find and translate all untranslated transcriptions
+	fmt.Println("Batch translation functionality will be implemented in next version")
 }

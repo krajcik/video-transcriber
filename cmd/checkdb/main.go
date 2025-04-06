@@ -9,24 +9,24 @@ import (
 )
 
 func main() {
-	// Загрузка конфигурации
+	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Ошибка загрузки конфигурации: %v", err)
+		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	// Инициализация базы данных
+	// Initialize database
 	db, err := database.New(cfg.DatabasePath)
 	if err != nil {
-		log.Fatalf("Ошибка инициализации базы данных: %v", err)
+		log.Fatalf("Error initializing database: %v", err)
 	}
 	defer db.Close()
 
-	// Проверка транскрипции с ID=1
+	// Check transcription with ID=1
 	_, err = db.GetTranscription(1)
 	if err != nil {
-		log.Printf("Транскрипция с ID=1 не найдена: %v", err)
+		log.Printf("Transcription with ID=1 not found: %v", err)
 	} else {
-		fmt.Println("Транскрипция с ID=1 существует в базе данных")
+		fmt.Println("Transcription with ID=1 exists in database")
 	}
 }
