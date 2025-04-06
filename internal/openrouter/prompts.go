@@ -2,33 +2,43 @@ package openrouter
 
 const (
 	analyzeTermsPrompt = `
-Analyze the following text and identify special terms 
-that should not be translated from English to Russian. For each term, provide 
-a description and context (sentences where the term appears).
+Analyze the text and extract MAX 15 most important special terms that MUST remain untranslated. Prioritize technical terms, proper nouns, and domain-specific jargon.
 
-Text:
-%s
+Rules:
+1. Include only terms critical for accurate translation
+2. Group similar terms (e.g. plural forms)
+3. Avoid obvious common nouns
+4. Never exceed 15 terms
 
-Return your answer strictly in the following JSON format:
+Format response as:
 {
   "terms": [
     {
-      "term": "grip",
-      "description": "traction between tires and road surface",
-      "context": [
-        "The car had excellent grip on the wet track.",
-        "Maintaining grip is crucial during high-speed cornering."
-      ]
-    },
-    {
-      "term": "rotation",
-      "description": "car rotating around its vertical axis",
-      "context": [
-        "The driver initiated rotation by applying the correct amount of steering input."
-      ]
+      "term": "original_term",
+      "note": "short context hint", 
+      "category": "technical|name|acronym|unit"
     }
   ]
 }
+
+Example:
+{
+  "terms": [
+    {
+      "term": "ABS", 
+      "note": "anti-lock braking system",
+      "category": "acronym"
+    },
+    {
+      "term": "Nürburgring",
+      "note": "famous race track",
+      "category": "name"
+    }
+  ]
+}
+
+Text:
+%s
 `
 
 	translateTextPrompt = `
