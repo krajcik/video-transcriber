@@ -1,0 +1,11 @@
+# Environment variables
+.env
+
+# JetBrains IDEs
+.idea/
+
+# VS Code
+.vscode/
+
+# Database files
+db/
