@@ -41,13 +41,7 @@ func (tm *TermManager) AddTerms(terms []*Term) {
 	tm.terms = terms
 }
 
-// ProcessTermsInteractive interactively processes terms with the user
-func (tm *TermManager) ProcessTermsInteractive() error {
-	if len(tm.terms) == 0 {
-		fmt.Println("No terms to process.")
-		return nil
-	}
-
+func (tm *TermManager) printTermsSummary() {
 	fmt.Printf("Found %d terms that may not need translation:\n\n", len(tm.terms))
 	for i, term := range tm.terms {
 		fmt.Printf("%d. %s - %s\n", i+1, term.Term, term.Description)
@@ -56,108 +50,157 @@ func (tm *TermManager) ProcessTermsInteractive() error {
 		}
 		fmt.Println()
 	}
+}
 
+func (tm *TermManager) printMenu() {
 	fmt.Println("Choose an action:")
 	fmt.Println("1. Accept all terms as is")
 	fmt.Println("2. Reject all terms")
 	fmt.Println("3. Process terms interactively")
 	fmt.Println("4. Edit terms in text editor")
+}
 
-	var choice string
+func (tm *TermManager) readUserChoice() (string, error) {
 	if tm.input != nil {
-		// Use test input
 		fmt.Print("> ")
+		var choice string
 		if _, err := fmt.Fscanln(tm.input, &choice); err != nil {
-			return fmt.Errorf("error reading choice: %w", err)
+			return "", fmt.Errorf("error reading choice: %w", err)
 		}
-	} else {
-		// Use standard input
-		fmt.Print("> ")
-		if _, err := fmt.Scanln(&choice); err != nil {
-			return fmt.Errorf("error reading choice: %w", err)
+		return choice, nil
+	}
+
+	fmt.Print("> ")
+	var choice string
+	if _, err := fmt.Scanln(&choice); err != nil || choice == "" {
+		return "1", nil // default to accept all
+	}
+	return choice, nil
+}
+
+func (tm *TermManager) acceptAllTerms() {
+	for _, term := range tm.terms {
+		term.Keep = true
+	}
+}
+
+func (tm *TermManager) rejectAllTerms() {
+	for _, term := range tm.terms {
+		term.Keep = false
+	}
+}
+
+func (tm *TermManager) processSingleTerm(term *Term, index, total int) error {
+	fmt.Printf("\nTerm: %s\n", term.Term)
+	fmt.Printf("Description: %s\n", term.Description)
+	for _, ctx := range term.Context {
+		fmt.Printf("Context: %s\n", ctx)
+	}
+	fmt.Print("Keep untranslated? [Y/n/e/s]: ")
+
+	response, err := tm.readUserResponse()
+	if err != nil {
+		return err
+	}
+
+	switch strings.ToLower(response) {
+	case "n":
+		term.Keep = false
+	case "e":
+		if err := tm.editTerm(term); err != nil {
+			return err
 		}
+	case "s":
+		return nil // skip
+	default:
+		term.Keep = true
+	}
+
+	fmt.Printf("Processed %d/%d terms\n", index+1, total)
+	return nil
+}
+
+func (tm *TermManager) readUserResponse() (string, error) {
+	if tm.input != nil {
+		var response string
+		if _, err := fmt.Fscanln(tm.input, &response); err != nil {
+			return "", fmt.Errorf("error reading response: %w", err)
+		}
+		return response, nil
+	}
+
+	var response string
+	if _, err := fmt.Scanln(&response); err != nil {
+		return "", fmt.Errorf("error reading response: %w", err)
+	}
+	return response, nil
+}
+
+func (tm *TermManager) editTerm(term *Term) error {
+	fmt.Printf("New term [%s]: ", term.Term)
+	newTerm, err := tm.readUserInput()
+	if err != nil {
+		return fmt.Errorf("error reading term: %w", err)
+	}
+	if newTerm != "" {
+		term.Term = newTerm
+	}
+
+	fmt.Printf("New description [%s]: ", term.Description)
+	newDesc, err := tm.readUserInput()
+	if err != nil {
+		return fmt.Errorf("error reading description: %w", err)
+	}
+	if newDesc != "" {
+		term.Description = newDesc
+	}
+	term.Keep = true
+	return nil
+}
+
+func (tm *TermManager) readUserInput() (string, error) {
+	if tm.input != nil {
+		var input string
+		if _, err := fmt.Fscanln(tm.input, &input); err != nil {
+			return "", fmt.Errorf("error reading input: %w", err)
+		}
+		return input, nil
+	}
+
+	var input string
+	if _, err := fmt.Scanln(&input); err != nil {
+		return "", fmt.Errorf("error reading input: %w", err)
+	}
+	return input, nil
+}
+
+// ProcessTermsInteractive interactively processes terms with the user
+func (tm *TermManager) ProcessTermsInteractive() error {
+	if len(tm.terms) == 0 {
+		fmt.Println("No terms to process.")
+		return nil
+	}
+
+	tm.printTermsSummary()
+	tm.printMenu()
+
+	choice, err := tm.readUserChoice()
+	if err != nil {
+		return err
 	}
 
 	switch choice {
 	case "1":
-		// accept all terms
-		for _, term := range tm.terms {
-			term.Keep = true
-		}
+		tm.acceptAllTerms()
 	case "2":
-		// reject all terms
-		for _, term := range tm.terms {
-			term.Keep = false
-		}
+		tm.rejectAllTerms()
 	case "3":
-		// process interactively
 		for i, term := range tm.terms {
-			fmt.Printf("\nTerm: %s\n", term.Term)
-			fmt.Printf("Description: %s\n", term.Description)
-			for _, ctx := range term.Context {
-				fmt.Printf("Context: %s\n", ctx)
+			if err := tm.processSingleTerm(term, i, len(tm.terms)); err != nil {
+				return err
 			}
-			fmt.Print("Keep untranslated? [Y/n/e/s]: ")
-
-			var response string
-			if tm.input != nil {
-				if _, err := fmt.Fscanln(tm.input, &response); err != nil {
-					return fmt.Errorf("error reading response: %w", err)
-				}
-			} else {
-				if _, err := fmt.Scanln(&response); err != nil {
-					return fmt.Errorf("error reading response: %w", err)
-				}
-			}
-			response = strings.ToLower(response)
-
-			if response == "n" {
-				term.Keep = false
-			} else if response == "e" {
-				// edit term
-				fmt.Printf("New term [%s]: ", term.Term)
-				var newTerm string
-				if tm.input != nil {
-					if _, err := fmt.Fscanln(tm.input, &newTerm); err != nil {
-						return fmt.Errorf("error reading term: %w", err)
-					}
-				} else {
-					if _, err := fmt.Scanln(&newTerm); err != nil {
-						return fmt.Errorf("error reading term: %w", err)
-					}
-				}
-				if newTerm != "" {
-					term.Term = newTerm
-				}
-
-				fmt.Printf("New description [%s]: ", term.Description)
-				var newDesc string
-				if tm.input != nil {
-					if _, err := fmt.Fscanln(tm.input, &newDesc); err != nil {
-						return fmt.Errorf("error reading description: %w", err)
-					}
-				} else {
-					if _, err := fmt.Scanln(&newDesc); err != nil {
-						return fmt.Errorf("error reading description: %w", err)
-					}
-				}
-				if newDesc != "" {
-					term.Description = newDesc
-				}
-				term.Keep = true
-			} else if response == "s" {
-				// skip
-				continue
-			} else {
-				// default is Yes
-				term.Keep = true
-			}
-
-			// show progress
-			fmt.Printf("Processed %d/%d terms\n", i+1, len(tm.terms))
 		}
 	case "4":
-		// edit in text editor
 		if err := tm.editInTextEditor(); err != nil {
 			return err
 		}
@@ -170,32 +213,27 @@ func (tm *TermManager) ProcessTermsInteractive() error {
 
 // editInTextEditor opens the terms in a text editor for batch editing
 func (tm *TermManager) editInTextEditor() error {
-	// prepare JSON data for editing
 	jsonData := struct {
 		Terms []*Term `json:"terms"`
 	}{
 		Terms: tm.terms,
 	}
 
-	// set all terms to keep by default
 	for _, term := range tm.terms {
 		term.Keep = true
 	}
 
-	// marshal to JSON
 	data, err := json.MarshalIndent(jsonData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("error marshaling terms: %w", err)
 	}
 
-	// create temporary file
 	tmpFile, err := os.CreateTemp("", "terms-*.json")
 	if err != nil {
 		return fmt.Errorf("error creating temp file: %w", err)
 	}
 	defer os.Remove(tmpFile.Name())
 
-	// write JSON to file
 	if _, err := tmpFile.Write(data); err != nil {
 		return fmt.Errorf("error writing temp file: %w", err)
 	}
@@ -203,7 +241,6 @@ func (tm *TermManager) editInTextEditor() error {
 		return fmt.Errorf("error closing temp file: %w", err)
 	}
 
-	// open in editor
 	editor := getDefaultEditor()
 	cmd := exec.Command(editor, filepath.Clean(tmpFile.Name())) // #nosec G204
 	cmd.Stdin = os.Stdin
@@ -215,13 +252,11 @@ func (tm *TermManager) editInTextEditor() error {
 		return fmt.Errorf("error running editor: %w", err)
 	}
 
-	// read edited file
 	editedData, err := os.ReadFile(tmpFile.Name())
 	if err != nil {
 		return fmt.Errorf("error reading edited file: %w", err)
 	}
 
-	// unmarshal edited data
 	var editedJSON struct {
 		Terms []*Term `json:"terms"`
 	}
@@ -229,9 +264,7 @@ func (tm *TermManager) editInTextEditor() error {
 		return fmt.Errorf("error parsing edited file: %w", err)
 	}
 
-	// update terms
 	tm.terms = editedJSON.Terms
-
 	return nil
 }
 
@@ -259,14 +292,12 @@ func getDefaultEditor() string {
 	case "darwin":
 		return "open -a TextEdit"
 	default:
-		// try to use environment variables for Linux
 		if editor := os.Getenv("EDITOR"); editor != "" {
 			return editor
 		}
 		if editor := os.Getenv("VISUAL"); editor != "" {
 			return editor
 		}
-		// default to nano as it's commonly available
 		return "nano"
 	}
 }

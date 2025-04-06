@@ -94,36 +94,51 @@ func (c *Client) AnalyzeTerms(text string) (*TermAnalysis, error) {
 		return nil, fmt.Errorf("error getting completion: %w", err)
 	}
 
-	// extract the JSON response
+	// extract the response content
 	if len(resp.Choices) == 0 {
 		return nil, fmt.Errorf("no choices in response")
 	}
 
 	content := resp.Choices[0].Message.Content
+	fmt.Printf("Raw API response content:\n%s\n", content)
 
-	// extract JSON from response (handles both raw JSON and markdown with explanations)
-	jsonStart := strings.Index(content, "```json")
-	if jsonStart != -1 {
-		// if markdown format, extract the JSON part
-		content = content[jsonStart+7:] // skip "```json"
-		jsonEnd := strings.LastIndex(content, "```")
-		if jsonEnd != -1 {
-			content = content[:jsonEnd]
+	// try to find JSON in various formats
+	var jsonStr string
+	if strings.Contains(content, "```json") {
+		// markdown code block format
+		parts := strings.Split(content, "```json")
+		if len(parts) > 1 {
+			jsonStr = strings.Split(parts[1], "```")[0]
+		}
+	} else if strings.Contains(content, "```") {
+		// generic code block format
+		parts := strings.Split(content, "```")
+		if len(parts) > 1 {
+			jsonStr = parts[1]
 		}
 	} else {
-		// if no markdown, look for the first {
-		jsonStart = strings.Index(content, "{")
-		if jsonStart != -1 {
-			content = content[jsonStart:]
+		// try to find raw JSON
+		start := strings.Index(content, "{")
+		end := strings.LastIndex(content, "}")
+		if start != -1 && end != -1 && end > start {
+			jsonStr = content[start : end+1]
 		}
 	}
 
-	content = strings.TrimSpace(content)
+	jsonStr = strings.TrimSpace(jsonStr)
+	if jsonStr == "" {
+		return nil, fmt.Errorf("no JSON found in response")
+	}
 
 	// parse the JSON response
 	var analysis TermAnalysis
-	if err := json.Unmarshal([]byte(content), &analysis); err != nil {
-		return nil, fmt.Errorf("error parsing analysis: %w (content: %s)", err, content)
+	if err := json.Unmarshal([]byte(jsonStr), &analysis); err != nil {
+		return nil, fmt.Errorf("error parsing analysis: %w\nJSON content:\n%s", err, jsonStr)
+	}
+
+	// validate we got at least some terms
+	if len(analysis.Terms) == 0 {
+		return nil, fmt.Errorf("no terms found in analysis")
 	}
 
 	return &analysis, nil
