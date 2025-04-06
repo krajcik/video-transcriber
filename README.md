@@ -1,42 +1,45 @@
-# AssemblyAI Transcriber ![Go Version](https://img.shields.io/github/go-mod/go-version/eshesh/assemblyai-transcriber) ![License](https://img.shields.io/github/license/eshesh/assemblyai-transcriber)
+# AssemblyAI Transcriber
 
-A command-line tool for transcribing audio from video files using AssemblyAI, with additional support for term analysis and Russian translation powered by OpenRouter's Llama 4 Maverick model.
-
-## Table of Contents
-- [Features](#features)
-- [Requirements](#requirements)  
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-  - [Examples](#examples)
-- [Translation Process](#translation-process)
-  - [Term Management](#term-management-interface)
-- [Database Schema](#database-schema)
-- [Development](#development)
-- [License](#license)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
+A Go application for transcribing video files using AssemblyAI API.
 
 ## Features
-
-- Extract audio from video files using `ffmpeg`
-- Transcribe audio using AssemblyAI API
-- Store transcripts in SQLite database
-- Analyze text for specialized terms that should not be translated
-- Translate transcripts from English to Russian using OpenRouter's Llama 4 Maverick
-- Interactive interface for managing untranslatable terms
-- Export transcripts and translations to text files
-
-## Requirements
-
-- [Go](https://go.dev/) 1.16 or higher
-- [FFmpeg](https://ffmpeg.org/) installed and available in PATH
-- [AssemblyAI](https://www.assemblyai.com/) API key
-- [OpenRouter](https://openrouter.ai/) API key (for translation features)
+- Video to text transcription
+- Audio extraction from video files
+- Translation capabilities
 
 ## Installation
+1. Clone the repository
+2. Set up your AssemblyAI API key in `.env` file
+3. Run `go build ./...`
 
-1. Clone the repository:
+## Usage
+```bash
+# Transcribe video file to database
+./bin/savetodb -input video.mp4
+
+# Translate text
+./bin/translate -text "text to translate"
+```
+
+## Requirements
+- Go 1.24+
+- FFmpeg
+- AssemblyAI API key
+
+## Development
+```bash
+# Run all tests
+go test ./...
+
+# Run linter
+golangci-lint run ./...
+
+# Format code
+gofmt -s -w .
+
+# Run with coverage
+go test -cover ./...
+```
 ```bash
 git clone https://github.com/eshesh/assemblyai-transcriber.git
 cd assemblyai-transcriber

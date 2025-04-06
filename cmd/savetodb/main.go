@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -9,19 +10,23 @@ import (
 
 	"assemblyai-transcriber/internal/config"
 	"assemblyai-transcriber/internal/database"
+	"assemblyai-transcriber/internal/transcribe"
 )
 
 func run() int {
 	// command-line flags
 	var (
 		transcriptFlag = flag.String("transcript", "", "Path to transcript file")
+		videoFlag      = flag.String("video", "", "Path to video file")
 		dbPathFlag     = flag.String("db", "", "Path to database file")
 	)
 	flag.Parse()
 
 	// validate required flags
-	if *transcriptFlag == "" || *dbPathFlag == "" {
-		fmt.Println("Usage: savetodb --transcript=file --db=database.db")
+	if (*transcriptFlag == "" && *videoFlag == "") || *dbPathFlag == "" {
+		fmt.Println("Usage:")
+		fmt.Println("  For text transcripts: savetodb --transcript=file --db=database.db")
+		fmt.Println("  For video files: savetodb --video=file --db=database.db")
 		flag.PrintDefaults()
 		return 1
 	}
@@ -38,11 +43,24 @@ func run() int {
 		cfg.DatabasePath = *dbPathFlag
 	}
 
-	// read transcript file
-	transcriptText, err := os.ReadFile(filepath.Clean(*transcriptFlag))
-	if err != nil {
-		log.Printf("Error reading transcript file: %v", err)
-		return 1
+	var transcriptText string
+
+	if *videoFlag != "" {
+		// transcribe video file
+		transcriber := transcribe.New(cfg.AssemblyAIAPIKey)
+		transcriptText, err = transcriber.TranscribeVideo(context.Background(), *videoFlag)
+		if err != nil {
+			log.Printf("Error transcribing video: %v", err)
+			return 1
+		}
+	} else {
+		// read transcript file
+		transcriptTextBytes, err := os.ReadFile(filepath.Clean(*transcriptFlag))
+		if err != nil {
+			log.Printf("Error reading transcript file: %v", err)
+			return 1
+		}
+		transcriptText = string(transcriptTextBytes)
 	}
 
 	// initialize database
@@ -64,8 +82,11 @@ func run() int {
 	}
 
 	// save to database
-	fileName := filepath.Base(*transcriptFlag)
-	id, err := db.SaveTranscription(fileName, string(transcriptText))
+	fileName := filepath.Base(*videoFlag)
+	if fileName == "" {
+		fileName = filepath.Base(*transcriptFlag)
+	}
+	id, err := db.SaveTranscription(fileName, transcriptText)
 	if err != nil {
 		log.Printf("Error saving to database: %v", err)
 		return 1
