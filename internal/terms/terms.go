@@ -21,6 +21,7 @@ type Term struct {
 // TermManager manages the terms analysis and user interaction
 type TermManager struct {
 	terms []*Term
+	input *strings.Reader // for testing
 }
 
 // New creates a new term manager
@@ -28,6 +29,11 @@ func New() *TermManager {
 	return &TermManager{
 		terms: []*Term{},
 	}
+}
+
+// SetInput sets the input reader for testing
+func (tm *TermManager) SetInput(input *strings.Reader) {
+	tm.input = input
 }
 
 // AddTerms adds terms to the manager
@@ -58,9 +64,18 @@ func (tm *TermManager) ProcessTermsInteractive() error {
 	fmt.Println("4. Edit terms in text editor")
 
 	var choice string
-	fmt.Print("> ")
-	if _, err := fmt.Scanln(&choice); err != nil {
-		return fmt.Errorf("error reading choice: %w", err)
+	if tm.input != nil {
+		// Use test input
+		fmt.Print("> ")
+		if _, err := fmt.Fscanln(tm.input, &choice); err != nil {
+			return fmt.Errorf("error reading choice: %w", err)
+		}
+	} else {
+		// Use standard input
+		fmt.Print("> ")
+		if _, err := fmt.Scanln(&choice); err != nil {
+			return fmt.Errorf("error reading choice: %w", err)
+		}
 	}
 
 	switch choice {
@@ -85,8 +100,14 @@ func (tm *TermManager) ProcessTermsInteractive() error {
 			fmt.Print("Keep untranslated? [Y/n/e/s]: ")
 
 			var response string
-			if _, err := fmt.Scanln(&response); err != nil {
-				return fmt.Errorf("error reading response: %w", err)
+			if tm.input != nil {
+				if _, err := fmt.Fscanln(tm.input, &response); err != nil {
+					return fmt.Errorf("error reading response: %w", err)
+				}
+			} else {
+				if _, err := fmt.Scanln(&response); err != nil {
+					return fmt.Errorf("error reading response: %w", err)
+				}
 			}
 			response = strings.ToLower(response)
 
@@ -96,8 +117,14 @@ func (tm *TermManager) ProcessTermsInteractive() error {
 				// edit term
 				fmt.Printf("New term [%s]: ", term.Term)
 				var newTerm string
-				if _, err := fmt.Scanln(&newTerm); err != nil {
-					return fmt.Errorf("error reading term: %w", err)
+				if tm.input != nil {
+					if _, err := fmt.Fscanln(tm.input, &newTerm); err != nil {
+						return fmt.Errorf("error reading term: %w", err)
+					}
+				} else {
+					if _, err := fmt.Scanln(&newTerm); err != nil {
+						return fmt.Errorf("error reading term: %w", err)
+					}
 				}
 				if newTerm != "" {
 					term.Term = newTerm
@@ -105,8 +132,14 @@ func (tm *TermManager) ProcessTermsInteractive() error {
 
 				fmt.Printf("New description [%s]: ", term.Description)
 				var newDesc string
-				if _, err := fmt.Scanln(&newDesc); err != nil {
-					return fmt.Errorf("error reading description: %w", err)
+				if tm.input != nil {
+					if _, err := fmt.Fscanln(tm.input, &newDesc); err != nil {
+						return fmt.Errorf("error reading description: %w", err)
+					}
+				} else {
+					if _, err := fmt.Scanln(&newDesc); err != nil {
+						return fmt.Errorf("error reading description: %w", err)
+					}
 				}
 				if newDesc != "" {
 					term.Description = newDesc

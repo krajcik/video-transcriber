@@ -9,3 +9,6 @@
 
 # Database files
 db/
+
+# Test coverage
+coverage.out

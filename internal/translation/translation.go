@@ -6,20 +6,33 @@ import (
 	"path/filepath"
 	"strings"
 
-	"assemblyai-transcriber/internal/database"
 	"assemblyai-transcriber/internal/openrouter"
 	"assemblyai-transcriber/internal/terms"
 )
 
+// Database defines database operations needed for translation
+type Database interface {
+	GetTranscription(int64) (string, error)
+	GetTranslation(int64) (string, error)
+	SaveTerm(string, string) error
+	SaveTranslation(int64, string) error
+}
+
+// OpenRouter defines operations for text analysis and translation
+type OpenRouter interface {
+	AnalyzeTerms(string) (*openrouter.TermAnalysis, error)
+	TranslateText(string, []string) (string, error)
+}
+
 // Service manages the translation workflow
 type Service struct {
-	db          *database.DB
-	openrouter  *openrouter.Client
+	db          Database
+	openrouter  OpenRouter
 	termManager *terms.TermManager
 }
 
 // New creates a new translation service
-func New(db *database.DB, openrouter *openrouter.Client) *Service {
+func New(db Database, openrouter OpenRouter) *Service {
 	return &Service{
 		db:          db,
 		openrouter:  openrouter,
