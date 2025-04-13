@@ -10,6 +10,7 @@ import (
 
 	"assemblyai-transcriber/internal/config"
 	"assemblyai-transcriber/internal/database"
+	"assemblyai-transcriber/internal/interfaces"
 	"assemblyai-transcriber/internal/transcribe"
 )
 
@@ -47,7 +48,7 @@ func run() int {
 
 	if *videoFlag != "" {
 		// transcribe video file
-		transcriber := transcribe.New(cfg.AssemblyAIAPIKey)
+		var transcriber interfaces.Transcriber = transcribe.New(cfg.AssemblyAIAPIKey)
 		transcriptText, err = transcriber.TranscribeVideo(context.Background(), *videoFlag)
 		if err != nil {
 			log.Printf("Error transcribing video: %v", err)
@@ -64,11 +65,13 @@ func run() int {
 	}
 
 	// initialize database
-	db, err := database.New(cfg.DatabasePath)
+	var db interfaces.Database
+	dbImpl, err := database.New(cfg.DatabasePath)
 	if err != nil {
 		log.Printf("Error initializing database: %v", err)
 		return 1
 	}
+	db = dbImpl
 	defer func() {
 		if err := db.Close(); err != nil {
 			log.Printf("Error closing database: %v", err)
