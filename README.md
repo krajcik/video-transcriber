@@ -1,7 +1,7 @@
 # AssemblyAI Transcriber
 
-![Build Status](https://github.com/eshesh/video-transcriber/actions/workflows/ci.yml/badge.svg)
-![Coverage](https://img.shields.io/badge/coverage-unknown-lightgrey)
+[![Build Status](https://github.com/eshesh/video-transcriber/actions/workflows/ci.yml/badge.svg)](https://github.com/eshesh/video-transcriber/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/eshesh/video-transcriber/branch/master/graph/badge.svg)](https://codecov.io/gh/eshesh/video-transcriber)
 
 A Go application for transcribing video files using AssemblyAI API.
 
