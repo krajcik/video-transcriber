@@ -1,10 +1,50 @@
 package database
 
 import (
+	"os"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func applyMigrationsForTest(db *DB, t *testing.T) {
+	_, thisFile, _, _ := runtime.Caller(0)
+	projectRoot := filepath.Dir(filepath.Dir(filepath.Dir(thisFile)))
+	migrationsDir := filepath.Join(projectRoot, "migrations")
+	files, err := os.ReadDir(migrationsDir)
+	require.NoError(t, err)
+
+	upBlock := regexp.MustCompile(`--\s*\+goose Up([\s\S]*?)(--\s*\+goose|$)`)
+	for _, file := range files {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), ".sql") {
+			continue
+		}
+		content, err := os.ReadFile(filepath.Join(migrationsDir, file.Name()))
+		require.NoError(t, err)
+		matches := upBlock.FindStringSubmatch(string(content))
+		if len(matches) < 2 {
+			continue
+		}
+		sql := strings.TrimSpace(matches[1])
+		if sql == "" {
+			continue
+		}
+		// поддержка нескольких выражений в одном блоке
+		stmts := strings.Split(sql, ";")
+		for _, stmt := range stmts {
+			stmt = strings.TrimSpace(stmt)
+			if stmt == "" {
+				continue
+			}
+			_, err := db.conn.Exec(stmt)
+			require.NoError(t, err)
+		}
+	}
+}
 
 func TestDatabase(t *testing.T) {
 	t.Run("New and Close", func(t *testing.T) {
@@ -19,8 +59,7 @@ func TestDatabase(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		err = db.Setup()
-		require.NoError(t, err)
+		applyMigrationsForTest(db, t)
 
 		// Verify tables exist
 		tables := []string{"transcriptions", "untranslatable_terms", "translations"}
@@ -34,7 +73,7 @@ func TestDatabase(t *testing.T) {
 		db, err := New(":memory:")
 		require.NoError(t, err)
 		defer db.Close()
-		require.NoError(t, db.Setup())
+		applyMigrationsForTest(db, t)
 
 		// Create
 		id, err := db.SaveTranscription("test.mp3", "test transcription")
@@ -51,7 +90,7 @@ func TestDatabase(t *testing.T) {
 		db, err := New(":memory:")
 		require.NoError(t, err)
 		defer db.Close()
-		require.NoError(t, db.Setup())
+		applyMigrationsForTest(db, t)
 
 		// Create
 		err = db.SaveTerm("test term", "test description")
@@ -69,7 +108,7 @@ func TestDatabase(t *testing.T) {
 		db, err := New(":memory:")
 		require.NoError(t, err)
 		defer db.Close()
-		require.NoError(t, db.Setup())
+		applyMigrationsForTest(db, t)
 
 		// Create transcription first
 		transcriptionID, err := db.SaveTranscription("test.mp3", "test transcription")

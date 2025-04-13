@@ -162,24 +162,29 @@ Choose action:
 [4] Edit terms
 ```
 
-## Database Schema
+## Database Migrations
 
-```sql
-CREATE TABLE transcriptions (
-  id TEXT PRIMARY KEY,
-  input_file TEXT NOT NULL,
-  transcript TEXT NOT NULL, 
-  translation TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+Database schema is managed using [goose](https://github.com/pressly/goose) and migration files in the `migrations/` directory.
 
-CREATE TABLE terms (
-  id INTEGER PRIMARY KEY,
-  term TEXT NOT NULL,
-  description TEXT,
-  transcription_id TEXT REFERENCES transcriptions(id)
-);
+### Apply migrations
+
+```bash
+make migrate-up
 ```
+
+### Rollback the last migration
+
+```bash
+make migrate-down
+```
+
+### Check migration status
+
+```bash
+make migrate-status
+```
+
+By default, migrations are applied to the `data.db` file in the project root (you can change the path in the Makefile).
 
 ## Development
 

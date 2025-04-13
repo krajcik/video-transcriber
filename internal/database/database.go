@@ -26,48 +26,8 @@ func New(dbPath string) (*DB, error) {
 	return &DB{conn: conn}, nil
 }
 
-// Setup initializes the database schema
+// Setup is deprecated: schema initialization is now handled by goose migrations.
 func (db *DB) Setup() error {
-	// create transcriptions table
-	_, err := db.conn.Exec(`
-		CREATE TABLE IF NOT EXISTS transcriptions (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			file_name TEXT NOT NULL,
-			transcript_text TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		return fmt.Errorf("error creating transcriptions table: %w", err)
-	}
-
-	// create untranslatable_terms table
-	_, err = db.conn.Exec(`
-		CREATE TABLE IF NOT EXISTS untranslatable_terms (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			term TEXT NOT NULL UNIQUE,
-			description TEXT,
-			added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		return fmt.Errorf("error creating untranslatable_terms table: %w", err)
-	}
-
-	// create translations table
-	_, err = db.conn.Exec(`
-		CREATE TABLE IF NOT EXISTS translations (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			transcription_id INTEGER,
-			translated_text TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (transcription_id) REFERENCES transcriptions(id)
-		)
-	`)
-	if err != nil {
-		return fmt.Errorf("error creating translations table: %w", err)
-	}
-
 	return nil
 }
 
