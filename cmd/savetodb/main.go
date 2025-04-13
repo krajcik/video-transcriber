@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
+
+	"github.com/go-pkgz/lgr"
 
 	"assemblyai-transcriber/internal/config"
 	"assemblyai-transcriber/internal/database"
@@ -14,6 +15,7 @@ import (
 )
 
 func run() int {
+	lgr.Setup()
 	var (
 		transcriptFlag = flag.String("transcript", "", "Path to transcript file")
 		videoFlag      = flag.String("video", "", "Path to video file")
@@ -22,9 +24,9 @@ func run() int {
 	flag.Parse()
 
 	if (*transcriptFlag == "" && *videoFlag == "") || *dbPathFlag == "" {
-		fmt.Println("Usage:")
-		fmt.Println("  For text transcripts: savetodb --transcript=file --db=database.db")
-		fmt.Println("  For video files: savetodb --video=file --db=database.db")
+		lgr.Printf("Usage:")
+		lgr.Printf("  For text transcripts: savetodb --transcript=file --db=database.db")
+		lgr.Printf("  For video files: savetodb --video=file --db=database.db")
 		flag.PrintDefaults()
 		return 1
 	}
@@ -45,11 +47,11 @@ func run() int {
 		DatabasePath:   *dbPathFlag,
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		lgr.Printf("Error: %v", err)
 		return 1
 	}
 
-	fmt.Printf("Successfully saved transcript to database with ID: %d\n", id)
+	lgr.Printf("Successfully saved transcript to database with ID: %d", id)
 	return 0
 }
 

@@ -2,9 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"os"
+
+	"github.com/go-pkgz/lgr"
 
 	"assemblyai-transcriber/internal/config"
 	"assemblyai-transcriber/internal/database"
@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+	lgr.Setup()
 	// Parse command line arguments
 	idFlag := flag.Int64("id", 0, "Transcription ID to translate")
 	langFlag := flag.String("lang", "ru", "Target language (e.g. 'ru')")
@@ -21,7 +22,7 @@ func main() {
 
 	// Validate arguments
 	if *idFlag == 0 && !*allFlag {
-		fmt.Println("Must specify either --id or --all")
+		lgr.Printf("Must specify either --id or --all")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -29,13 +30,13 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Error loading configuration: %v", err)
+		lgr.Fatalf("Error loading configuration: %v", err)
 	}
 
 	// Initialize database
 	db, err := database.New(cfg.DatabasePath)
 	if err != nil {
-		log.Fatalf("Error initializing database: %v", err)
+		lgr.Fatalf("Error initializing database: %v", err)
 	}
 	defer db.Close()
 
@@ -55,20 +56,20 @@ func main() {
 
 // translateSingle translates a single transcription
 func translateSingle(id int64, lang string, service *translation.Service) {
-	fmt.Printf("Translating transcription ID %d to %s...\n", id, lang)
+	lgr.Printf("Translating transcription ID %d to %s...", id, lang)
 
 	err := service.ProcessTranscription(id)
 	if err != nil {
-		log.Fatalf("Translation error: %v", err)
+		lgr.Fatalf("Translation error: %v", err)
 	}
 
-	fmt.Println("Translation completed and saved to database")
+	lgr.Printf("Translation completed and saved to database")
 }
 
 // translateAll translates all untranslated transcriptions
 func translateAll(lang string, _ *translation.Service) {
-	fmt.Printf("Finding untranslated transcriptions for %s translation...\n", lang)
+	lgr.Printf("Finding untranslated transcriptions for %s translation...", lang)
 
 	// TODO: Implement logic to find and translate all untranslated transcriptions
-	fmt.Println("Batch translation functionality will be implemented in next version")
+	lgr.Printf("Batch translation functionality will be implemented in next version")
 }
