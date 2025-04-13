@@ -32,10 +32,10 @@ type Service struct {
 }
 
 // New creates a new translation service
-func New(db Database, openrouter OpenRouter) *Service {
+func New(db Database, openRouterClient OpenRouter) *Service {
 	return &Service{
 		db:          db,
-		openrouter:  openrouter,
+		openrouter:  openRouterClient,
 		termManager: terms.New(),
 	}
 }
