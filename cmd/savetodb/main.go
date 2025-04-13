@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"os"
 
+	"assemblyai-transcriber/internal/config"
+	"assemblyai-transcriber/internal/database"
+	"assemblyai-transcriber/internal/interfaces"
 	"assemblyai-transcriber/internal/savetodb"
+	"assemblyai-transcriber/internal/transcribe"
 )
 
 func run() int {
@@ -25,7 +29,16 @@ func run() int {
 		return 1
 	}
 
-	service := savetodb.NewService()
+	service := savetodb.NewService(
+		config.Load,
+		func(path string) (interfaces.Database, error) {
+			return database.New(path)
+		},
+		func(apiKey string) interfaces.Transcriber {
+			return transcribe.New(apiKey)
+		},
+		os.ReadFile,
+	)
 	id, err := service.SaveTranscript(context.Background(), savetodb.SaveTranscriptOptions{
 		TranscriptPath: *transcriptFlag,
 		VideoPath:      *videoFlag,
