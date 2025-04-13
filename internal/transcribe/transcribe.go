@@ -13,6 +13,7 @@ import (
 
 var execCommand = exec.Command
 
+// Client is a video transcription client for AssemblyAI.
 type Client struct {
 	apiKey           string
 	maxFileSizeBytes int

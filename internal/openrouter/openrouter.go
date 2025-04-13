@@ -2,9 +2,12 @@ package openrouter
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -75,6 +78,9 @@ func New(apiKey string) *Client {
 
 // AnalyzeTerms analyzes text to identify terms that should not be translated
 func (c *Client) AnalyzeTerms(text string) (*TermAnalysis, error) {
+	if strings.TrimSpace(text) == "" {
+		return nil, fmt.Errorf("input text is empty")
+	}
 	prompt := fmt.Sprintf(analyzeTermsPrompt, text)
 
 	// create the completion request
@@ -146,6 +152,9 @@ func (c *Client) AnalyzeTerms(text string) (*TermAnalysis, error) {
 
 // TranslateTextChunk translates a single chunk of text from English to Russian, preserving specified terms
 func (c *Client) TranslateTextChunk(chunk string, terms []string) (string, error) {
+	if strings.TrimSpace(chunk) == "" {
+		return "", fmt.Errorf("input chunk is empty")
+	}
 	// join terms for the prompt
 	termsList := ""
 	for _, term := range terms {
@@ -341,35 +350,59 @@ func (c *Client) createCompletion(req CompletionRequest) (*CompletionResponse, e
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	httpReq.Header.Set("HTTP-Referer", "https://github.com/AssemblyAI/assemblyai-go-sdk")
 
-	// send the request
-	httpResp, err := c.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("error sending request: %w", err)
+	const maxAttempts = 3
+	var lastErr error
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		// send the request
+		httpResp, err := c.httpClient.Do(httpReq)
+		if err != nil {
+			// check for temporary network errors
+			var netErr net.Error
+			if errors.Is(err, context.DeadlineExceeded) ||
+				(errors.As(err, &netErr) && netErr.Timeout()) {
+				lastErr = fmt.Errorf("temporary network error (attempt %d/%d): %w", attempt, maxAttempts, err)
+				time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+				continue
+			}
+			return nil, fmt.Errorf("error sending request: %w", err)
+		}
+
+		// read the response body
+		respBody, err := io.ReadAll(httpResp.Body)
+		errClose := httpResp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("error reading response: %w", err)
+		}
+		if errClose != nil {
+			return nil, fmt.Errorf("error closing response body: %w", errClose)
+		}
+
+		// log request and response for debugging
+		fmt.Printf("Request URL: %s\n", httpReq.URL)
+		fmt.Printf("Request Headers: %v\n", httpReq.Header)
+		fmt.Printf("Response Status: %s\n", httpResp.Status)
+		fmt.Printf("Response Body: %s\n", string(respBody))
+
+		// check for errors
+		if httpResp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("API error: %s, body: %s", httpResp.Status, string(respBody))
+			// retry on 5xx errors
+			if httpResp.StatusCode >= 500 && httpResp.StatusCode < 600 && attempt < maxAttempts {
+				time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+				continue
+			}
+			return nil, lastErr
+		}
+
+		// unmarshal the response
+		var resp CompletionResponse
+		if err := json.Unmarshal(respBody, &resp); err != nil {
+			return nil, fmt.Errorf("error unmarshaling response: %w", err)
+		}
+
+		return &resp, nil
 	}
-	defer httpResp.Body.Close()
 
-	// read the response body
-	respBody, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response: %w", err)
-	}
-
-	// log request and response for debugging
-	fmt.Printf("Request URL: %s\n", httpReq.URL)
-	fmt.Printf("Request Headers: %v\n", httpReq.Header)
-	fmt.Printf("Response Status: %s\n", httpResp.Status)
-	fmt.Printf("Response Body: %s\n", string(respBody))
-
-	// check for errors
-	if httpResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API error: %s, body: %s", httpResp.Status, string(respBody))
-	}
-
-	// unmarshal the response
-	var resp CompletionResponse
-	if err := json.Unmarshal(respBody, &resp); err != nil {
-		return nil, fmt.Errorf("error unmarshaling response: %w", err)
-	}
-
-	return &resp, nil
+	return nil, lastErr
 }
