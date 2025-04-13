@@ -2,30 +2,32 @@ package openrouter
 
 const (
 	analyzeTermsPrompt = `
-Analyze the text and extract MAX 15 most important special terms that MUST remain untranslated. Prioritize technical terms, proper nouns, and domain-specific jargon.
+Extract up to 15 key terms from the text that must remain untranslated. Focus on technical terms, proper nouns, and domain-specific jargon.
 
-Rules:
-1. Include only terms critical for accurate translation
-2. Group similar terms (e.g. plural forms)
-3. Avoid obvious common nouns
-4. Never exceed 15 terms
+Instructions:
+1. Only include terms essential for correct translation.
+2. Group similar forms (e.g., singular/plural).
+3. Exclude common nouns and generic words.
+4. Never exceed 15 terms.
+5. Always return a valid JSON array, even if empty.
+6. Do not add any comments or explanations outside the JSON.
 
-Format response as:
+Response format:
 {
   "terms": [
     {
       "term": "original_term",
-      "note": "short context hint", 
+      "note": "short context hint",
       "category": "technical|name|acronym|unit"
     }
   ]
 }
 
-Example:
+Examples:
 {
   "terms": [
     {
-      "term": "ABS", 
+      "term": "ABS",
       "note": "anti-lock braking system",
       "category": "acronym"
     },
@@ -37,26 +39,32 @@ Example:
   ]
 }
 
+Edge-case (no terms found):
+{
+  "terms": []
+}
+
 Text:
 %s
 `
 
 	translateTextPrompt = `
-Translate the following text from English to Russian in a very concise way, aggressively removing:
+Translate the following text from %s to %s. Make the translation as concise as possible by removing:
 - Unnecessary words and phrases
 - Redundant explanations
-- Entire sentences that don't carry key information
-Keep only the most important facts and actions. Preserve the following terms untranslated:
+- Entire sentences that do not convey key information
+
+Preserve the following terms untranslated:
 %s
 
 Text to translate:
 %s
 
-Rules:
-1. Remove filler words and fluff
-2. Delete whole sentences if they don't add value
-3. Keep technical terms and key facts
-4. Make the text as short as possible while keeping core meaning
-5. Return only the cleaned translation without comments
+Instructions:
+1. Remove filler and redundant content.
+2. Delete sentences that do not add value.
+3. Keep technical terms and essential facts.
+4. Make the translation as short as possible while preserving core meaning.
+5. Return only the translated text, without any comments or formatting outside the translation.
 `
 )

@@ -161,7 +161,7 @@ func (c *Client) TranslateTextChunk(chunk string, terms []string) (string, error
 		termsList += "- " + term + "\n"
 	}
 
-	prompt := fmt.Sprintf(translateTextPrompt, termsList, chunk)
+	prompt := fmt.Sprintf(translateTextPrompt, "English", "Russian", termsList, chunk)
 
 	// create the completion request
 	req := CompletionRequest{
