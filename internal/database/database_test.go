@@ -33,7 +33,7 @@ func applyMigrationsForTest(db *DB, t *testing.T) {
 		if sql == "" {
 			continue
 		}
-		// поддержка нескольких выражений в одном блоке
+		// support for multiple statements in one block
 		stmts := strings.Split(sql, ";")
 		for _, stmt := range stmts {
 			stmt = strings.TrimSpace(stmt)

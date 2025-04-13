@@ -22,3 +22,6 @@ migrate-down:
 
 migrate-status:
 	$(GOOSE) -dir ./migrations sqlite3 ./data.db status
+
+check-cyrillic:
+	scripts/check_cyrillic.sh
