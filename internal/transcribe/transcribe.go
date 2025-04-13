@@ -13,14 +13,15 @@ import (
 
 var execCommand = exec.Command
 
-// Client is a client for AssemblyAI API
 type Client struct {
-	apiKey string
+	apiKey           string
+	maxFileSizeBytes int
 }
 
 // New creates a new transcription client
-func New(apiKey string) *Client {
-	return &Client{apiKey: apiKey}
+func New(apiKey string, maxFileSizeMB int) *Client {
+	maxBytes := maxFileSizeMB * 1024 * 1024
+	return &Client{apiKey: apiKey, maxFileSizeBytes: maxBytes}
 }
 
 // TranscribeVideo performs video file transcription
@@ -59,6 +60,14 @@ func (c *Client) transcribeAudio(ctx context.Context, audioPath string) (string,
 		return "", fmt.Errorf("file open error: %v", err)
 	}
 	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return "", fmt.Errorf("file stat error: %v", err)
+	}
+	if stat.Size() > int64(c.maxFileSizeBytes) {
+		return "", fmt.Errorf("audio file too large: %d bytes (limit: %d bytes)", stat.Size(), c.maxFileSizeBytes)
+	}
 
 	// Upload file to AssemblyAI server
 	audioURL, err := client.Upload(ctx, file)

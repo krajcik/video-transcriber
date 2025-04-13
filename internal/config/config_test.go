@@ -21,10 +21,11 @@ func TestConfig_Load(t *testing.T) {
 				os.Clearenv()
 			},
 			want: &Config{
-				AssemblyAIAPIKey: "",
-				OpenRouterAPIKey: "",
-				DatabasePath:     "./transcriptions.db",
-				LogLevel:         "info",
+				AssemblyAIAPIKey:   "",
+				OpenRouterAPIKey:   "",
+				DatabasePath:       "./transcriptions.db",
+				LogLevel:           "info",
+				MaxAudioFileSizeMB: 100,
 			},
 		},
 		{
@@ -37,10 +38,11 @@ func TestConfig_Load(t *testing.T) {
 				os.Setenv("LOG_LEVEL", "debug")
 			},
 			want: &Config{
-				AssemblyAIAPIKey: "test_assemblyai",
-				OpenRouterAPIKey: "test_openrouter",
-				DatabasePath:     "/tmp/test.db",
-				LogLevel:         "debug",
+				AssemblyAIAPIKey:   "test_assemblyai",
+				OpenRouterAPIKey:   "test_openrouter",
+				DatabasePath:       "/tmp/test.db",
+				LogLevel:           "debug",
+				MaxAudioFileSizeMB: 100,
 			},
 		},
 	}
@@ -95,6 +97,7 @@ LOG_LEVEL=warn
 	require.Equal(t, "env_test_assemblyai", got.AssemblyAIAPIKey)
 	require.Equal(t, "env_test_openrouter", got.OpenRouterAPIKey)
 	require.Equal(t, "warn", got.LogLevel)
+	require.Equal(t, 100, got.MaxAudioFileSizeMB)
 }
 
 func Test_getEnv(t *testing.T) {

@@ -31,13 +31,19 @@ func run() int {
 		return 1
 	}
 
+	cfg, err := config.Load()
+	if err != nil {
+		lgr.Printf("Error loading config: %v", err)
+		return 1
+	}
+
 	service := savetodb.NewService(
-		config.Load,
+		func() (*config.Config, error) { return cfg, nil },
 		func(path string) (interfaces.Database, error) {
 			return database.New(path)
 		},
 		func(apiKey string) interfaces.Transcriber {
-			return transcribe.New(apiKey)
+			return transcribe.New(apiKey, cfg.MaxAudioFileSizeMB)
 		},
 		os.ReadFile,
 	)

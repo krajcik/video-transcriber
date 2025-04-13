@@ -21,7 +21,7 @@ func TestExtractAudio(t *testing.T) {
 	}
 	defer func() { execCommand = exec.Command }()
 
-	client := New("test_key")
+	client := New("test_key", 100)
 	_, err := client.extractAudio("test.mp4")
 	assert.NoError(t, err)
 }
