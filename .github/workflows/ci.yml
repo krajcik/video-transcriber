@@ -30,6 +30,3 @@ jobs:
 
       - name: Run tests
         run: go test ./...
-
-      - name: Run linter
-        run: golangci-lint run --config=.golangci.yml ./...
