@@ -49,22 +49,33 @@ Text:
 `
 
 	translateTextPrompt = `
-Translate the following text from %s to %s. Make the translation as concise as possible by removing:
-- Unnecessary words and phrases
-- Redundant explanations
-- Entire sentences that do not convey key information
+Translate the following text from %s to %s and format the result as a well-structured markdown article.
 
-Preserve the following terms untranslated:
+Requirements:
+1. Remove unnecessary words, redundant explanations and non-essential sentences
+2. Keep technical terms and key facts
+3. Preserve these terms untranslated:
 %s
+4. Format the translation as markdown with:
+	  - Clear section headings (##, ###)
+	  - Bullet points for lists
+	  - Bold/italic for emphasis
+	  - Code blocks for technical terms
+5. Make the translation concise but readable
+
+Example markdown structure:
+## Main Topic
+Key points about the topic.
+
+### Subsection
+- Important detail 1
+- Important detail 2
+
+Use 'Term' for technical terms.
 
 Text to translate:
 %s
 
-Instructions:
-1. Remove filler and redundant content.
-2. Delete sentences that do not add value.
-3. Keep technical terms and essential facts.
-4. Make the translation as short as possible while preserving core meaning.
-5. Return only the translated text, without any comments or formatting outside the translation.
+Return only the formatted markdown without additional comments.
 `
 )
