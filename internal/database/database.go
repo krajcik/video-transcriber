@@ -1,20 +1,20 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
 
 // DB represents the database connection
 type DB struct {
-	conn *sql.DB
+	conn *sqlx.DB
 }
 
 // New creates a new database connection
 func New(dbPath string) (*DB, error) {
-	conn, err := sql.Open("sqlite3", dbPath)
+	conn, err := sqlx.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %w", err)
 	}
@@ -83,10 +83,10 @@ func (db *DB) SaveTranslation(transcriptionID int64, translatedText string) erro
 // GetTranscription retrieves a transcription by ID
 func (db *DB) GetTranscription(id int64) (string, error) {
 	var text string
-	err := db.conn.QueryRow(
+	err := db.conn.Get(&text,
 		"SELECT transcript_text FROM transcriptions WHERE id = ?",
 		id,
-	).Scan(&text)
+	)
 	if err != nil {
 		return "", fmt.Errorf("error retrieving transcription: %w", err)
 	}
@@ -96,38 +96,33 @@ func (db *DB) GetTranscription(id int64) (string, error) {
 
 // GetAllTerms retrieves all untranslatable terms
 func (db *DB) GetAllTerms() ([]map[string]string, error) {
-	rows, err := db.conn.Query("SELECT term, description FROM untranslatable_terms")
+	var terms []struct {
+		Term        string `db:"term"`
+		Description string `db:"description"`
+	}
+	err := db.conn.Select(&terms, "SELECT term, description FROM untranslatable_terms")
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving terms: %w", err)
 	}
-	defer rows.Close()
 
-	var terms []map[string]string
-	for rows.Next() {
-		var term, description string
-		if err := rows.Scan(&term, &description); err != nil {
-			return nil, fmt.Errorf("error scanning term row: %w", err)
+	result := make([]map[string]string, len(terms))
+	for i, t := range terms {
+		result[i] = map[string]string{
+			"term":        t.Term,
+			"description": t.Description,
 		}
-		terms = append(terms, map[string]string{
-			"term":        term,
-			"description": description,
-		})
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating term rows: %w", err)
-	}
-
-	return terms, nil
+	return result, nil
 }
 
 // GetTranslation retrieves a translation by transcription ID
 func (db *DB) GetTranslation(transcriptionID int64) (string, error) {
 	var text string
-	err := db.conn.QueryRow(
+	err := db.conn.Get(&text,
 		"SELECT translated_text FROM translations WHERE transcription_id = ?",
 		transcriptionID,
-	).Scan(&text)
+	)
 	if err != nil {
 		return "", fmt.Errorf("error retrieving translation: %w", err)
 	}

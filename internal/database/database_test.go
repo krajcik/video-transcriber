@@ -40,7 +40,7 @@ func applyMigrationsForTest(db *DB, t *testing.T) {
 			if stmt == "" {
 				continue
 			}
-			_, err := db.conn.Exec(stmt)
+				_, err = db.conn.Exec(stmt)
 			require.NoError(t, err)
 		}
 	}
@@ -64,7 +64,8 @@ func TestDatabase(t *testing.T) {
 		// Verify tables exist
 		tables := []string{"transcriptions", "untranslatable_terms", "translations"}
 		for _, table := range tables {
-			_, err := db.conn.Exec("SELECT name FROM sqlite_master WHERE type='table' AND name=?", table)
+			var tableName string
+	err := db.conn.Get(&tableName, "SELECT name FROM sqlite_master WHERE type='table' AND name=?", table)
 			require.NoError(t, err, "table %s should exist", table)
 		}
 	})
