@@ -15,6 +15,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-pkgz/lgr v0.12.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pressly/goose/v3 v3.24.2 // indirect
