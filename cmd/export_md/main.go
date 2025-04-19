@@ -32,7 +32,7 @@ func main() {
 	defer db.Close()
 
 	// Create output directory
-	if err := os.MkdirAll(*outDir, 0755); err != nil {
+        if err := os.MkdirAll(*outDir, 0o750); err != nil {
 		lgr.Fatalf("Error creating output directory: %v", err)
 	}
 
@@ -52,7 +52,7 @@ func main() {
 	// Save each translation to a markdown file
 	for _, t := range translations {
 		outputPath := filepath.Join(*outDir, fmt.Sprintf("translation_%d.md", t.ID))
-		err = os.WriteFile(outputPath, []byte(t.TranslatedText), 0644)
+                err = os.WriteFile(outputPath, []byte(t.TranslatedText), 0o600)
 		if err != nil {
 			lgr.Printf("Error saving %s: %v", outputPath, err)
 			continue
